@@ -7,10 +7,15 @@ import ExpensesPage from './pages/ExpensesPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import CreateInvoicePage from './pages/CreateInvoicePage'
 import CreateQuotationPage from './pages/CreateQuotationPage'
+import CustomerEditPage from './pages/CustomerEditPage'
+import ExpenseEditPage from './pages/ExpenseEditPage'
+import InvoiceEditorPage from './pages/InvoiceEditorPage'
 import InvoicesPage from './pages/InvoicesPage'
 import LoginPage from './pages/LoginPage'
+import PaymentEditPage from './pages/PaymentEditPage'
 import PaymentsPage from './pages/PaymentsPage'
 import ProductsPage from './pages/ProductsPage'
+import PurchaseDetailPage from './pages/PurchaseDetailPage'
 import PurchasesPage from './pages/PurchasesPage'
 import QuotationsPage from './pages/QuotationsPage'
 import RegisterPage from './pages/RegisterPage'
@@ -44,17 +49,23 @@ function App() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="customers" element={<CustomersPage />} />
+        <Route path="customers/:id/edit" element={<CustomerEditPage />} />
         <Route path="suppliers" element={<SuppliersPage />} />
         <Route path="products" element={<ProductsPage />} />
         <Route path="invoices" element={<InvoicesPage />} />
         <Route path="invoices/create" element={<CreateInvoicePage />} />
+        <Route path="invoices/:id/edit" element={<InvoiceEditorPage mode="invoice" />} />
         <Route path="invoices/:id/preview" element={<InvoicePdfPreviewPage />} />
         <Route path="quotations" element={<QuotationsPage />} />
         <Route path="quotations/create" element={<CreateQuotationPage />} />
+        <Route path="quotations/:id/edit" element={<InvoiceEditorPage mode="quotation" />} />
         <Route path="quotations/:id/preview" element={<InvoicePdfPreviewPage />} />
         <Route path="purchases" element={<PurchasesPage />} />
+        <Route path="purchases/:id" element={<PurchaseDetailPage />} />
         <Route path="payments" element={<PaymentsPage />} />
+        <Route path="payments/:id/edit" element={<PaymentEditPage />} />
         <Route path="expenses" element={<ExpensesPage />} />
+        <Route path="expenses/:id/edit" element={<ExpenseEditPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="settings/company" element={<CompanySettingsPage />} />

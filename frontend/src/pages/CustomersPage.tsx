@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { HiOutlineMagnifyingGlass, HiOutlinePlus, HiOutlineEllipsisVertical, HiOutlineEye, HiOutlinePencil, HiOutlineTrash } from 'react-icons/hi2'
 import api from '../services/api'
 import PageTitle from '../components/layout/PageTitle'
@@ -31,6 +32,7 @@ type PaginatedResponse = {
 }
 
 export default function CustomersPage() {
+  const navigate = useNavigate()
   const { showToast } = useToast()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [meta, setMeta] = useState({ current_page: 1, last_page: 1, total: 0 })
@@ -229,6 +231,9 @@ export default function CustomersPage() {
                     Credit Limit
                   </th>
                   <th className="relative px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">
+                    Delete
+                  </th>
+                  <th className="relative px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">
                     Actions
                   </th>
                 </tr>
@@ -236,19 +241,28 @@ export default function CustomersPage() {
               <tbody className="divide-y divide-slate-100 bg-white">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-sm text-slate-500">
+                    <td colSpan={7} className="px-6 py-12 text-center text-sm text-slate-500">
                       Loading...
                     </td>
                   </tr>
                 ) : customers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-sm text-slate-500">
+                    <td colSpan={7} className="px-6 py-12 text-center text-sm text-slate-500">
                       No customers found
                     </td>
                   </tr>
                 ) : (
                   customers.map((customer) => (
-                    <tr key={customer.id} className="hover:bg-slate-50/50">
+                    <tr
+                      key={customer.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => navigate(`/customers/${customer.id}/edit`)}
+                      onKeyDown={(ev) => {
+                        if (ev.key === 'Enter') navigate(`/customers/${customer.id}/edit`)
+                      }}
+                      className="cursor-pointer hover:bg-slate-50/50"
+                    >
                       <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-900">
                         {customer.name}
                       </td>
@@ -267,6 +281,20 @@ export default function CustomersPage() {
                           : '—'}
                       </td>
                       <td className="relative whitespace-nowrap px-6 py-4 text-right">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDelete(customer)
+                          }}
+                          disabled={deletingId === customer.id}
+                          className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                          aria-label="Delete customer"
+                        >
+                          <HiOutlineTrash className="h-5 w-5" />
+                        </button>
+                      </td>
+                      <td className="relative whitespace-nowrap px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="relative inline-block text-left">
                           <button
                             type="button"
@@ -302,17 +330,6 @@ export default function CustomersPage() {
                                   className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                                 >
                                   <HiOutlinePencil className="h-4 w-4" /> Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleDelete(customer)
-                                    setActionRowId(null)
-                                  }}
-                                  disabled={deletingId === customer.id}
-                                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-slate-50 disabled:opacity-50"
-                                >
-                                  <HiOutlineTrash className="h-4 w-4" /> Delete
                                 </button>
                               </div>
                             </>

@@ -20,8 +20,12 @@ export default function CreateInvoicePage() {
 
   useEffect(() => {
     Promise.all([
-      api.get<{ data?: Customer[] }>('/customers').then((r) => r.data?.data ?? []),
-      api.get<{ data?: Product[] }>('/products').then((r) => r.data?.data ?? []),
+      api
+        .get<{ data?: Customer[] }>('/customers', { params: { per_page: 500, page: 1 } })
+        .then((r) => r.data?.data ?? []),
+      api
+        .get<{ data?: Product[] }>('/products', { params: { per_page: 500, page: 1 } })
+        .then((r) => r.data?.data ?? []),
     ])
       .then(([c, p]) => {
         setCustomers(c)
@@ -35,10 +39,11 @@ export default function CreateInvoicePage() {
     invoice_date: string
     due_date: string
     items: { product_id: number; quantity: number; price: number; tax_rate: number }[]
+    discount_amount?: number
   }) => {
     setSaving(true)
     try {
-      await api.post('/invoices', payload)
+      await api.post('/invoices', { ...payload, status: 'sent' })
       showToast('Invoice created successfully.')
       navigate('/invoices')
     } catch {
@@ -52,7 +57,10 @@ export default function CreateInvoicePage() {
     return (
       <>
         <Breadcrumb items={[{ label: 'Invoices', to: '/invoices' }, { label: 'Create Invoice' }]} />
-        <PageTitle title="Create Invoice" description="Add a new invoice with line items." />
+        <PageTitle
+          title="Create Invoice"
+          description="Create an invoice to bill your customer after work is done. For pricing before work, use a quotation first."
+        />
         <Card>
           <CardContent>
             <p className="text-slate-500">Loading...</p>
@@ -67,7 +75,7 @@ export default function CreateInvoicePage() {
       <Breadcrumb items={[{ label: 'Invoices', to: '/invoices' }, { label: 'Create Invoice' }]} />
       <PageTitle
         title="Create Invoice"
-        description="Add customer, dates, and line items. Save or preview before sending."
+        description="Bill for completed work—send or export to the customer when ready. Estimates belong under Quotations."
       />
       <Card>
         <CardContent>

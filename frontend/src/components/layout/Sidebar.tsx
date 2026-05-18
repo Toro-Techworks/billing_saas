@@ -23,7 +23,7 @@ const navItems = [
   { to: '/customers', label: 'Customers', icon: HiOutlineUserGroup },
   { to: '/suppliers', label: 'Suppliers', icon: HiOutlineTruck },
   { to: '/products', label: 'Products', icon: HiOutlineCube },
-  { to: '/invoices', label: 'Billing', icon: HiOutlineDocumentText },
+  { to: '/invoices', label: 'Invoices', icon: HiOutlineDocumentText },
   { to: '/quotations', label: 'Quotations', icon: HiOutlineDocumentDuplicate },
   { to: '/purchases', label: 'Purchases', icon: HiOutlineShoppingCart },
   { to: '/payments', label: 'Payments', icon: HiOutlineBanknotes },

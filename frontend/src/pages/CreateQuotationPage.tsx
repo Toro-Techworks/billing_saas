@@ -20,8 +20,12 @@ export default function CreateQuotationPage() {
 
   useEffect(() => {
     Promise.all([
-      api.get<{ data?: Customer[] }>('/customers').then((r) => r.data?.data ?? []),
-      api.get<{ data?: Product[] }>('/products').then((r) => r.data?.data ?? []),
+      api
+        .get<{ data?: Customer[] }>('/customers', { params: { per_page: 500, page: 1 } })
+        .then((r) => r.data?.data ?? []),
+      api
+        .get<{ data?: Product[] }>('/products', { params: { per_page: 500, page: 1 } })
+        .then((r) => r.data?.data ?? []),
     ])
       .then(([c, p]) => {
         setCustomers(c)
@@ -35,6 +39,7 @@ export default function CreateQuotationPage() {
     invoice_date: string
     due_date: string
     items: { product_id: number; quantity: number; price: number; tax_rate: number }[]
+    discount_amount?: number
   }) => {
     setSaving(true)
     try {
@@ -52,7 +57,10 @@ export default function CreateQuotationPage() {
     return (
       <>
         <Breadcrumb items={[{ label: 'Quotations', to: '/quotations' }, { label: 'Create Quotation' }]} />
-        <PageTitle title="Create Quotation" description="Add a new quotation with line items." />
+        <PageTitle
+          title="Create Quotation"
+          description="Build an estimate or proposal before work begins. Issue an invoice later under Invoices when you bill for completed work."
+        />
         <Card>
           <CardContent>
             <p className="text-slate-500">Loading...</p>
@@ -65,12 +73,16 @@ export default function CreateQuotationPage() {
   return (
     <>
       <Breadcrumb items={[{ label: 'Quotations', to: '/quotations' }, { label: 'Create Quotation' }]} />
-      <PageTitle title="Create Quotation" description="Add customer, dates, and line items." />
+      <PageTitle
+        title="Create Quotation"
+        description="Estimate pricing and scope before you start. After the customer accepts, create an invoice to charge for the delivered work."
+      />
       <Card>
         <CardContent>
           <InvoiceForm
             customers={customers}
             products={products}
+            quotationMode
             onSubmit={onSubmit}
             onCancel={() => navigate('/quotations')}
             saving={saving}

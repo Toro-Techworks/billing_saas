@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { HiOutlineMagnifyingGlass, HiOutlinePlus } from 'react-icons/hi2'
+import { useNavigate } from 'react-router-dom'
+import { HiOutlineMagnifyingGlass, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi2'
 import api from '../services/api'
 import PageTitle from '../components/layout/PageTitle'
 import Button from '../components/Button'
@@ -24,6 +25,7 @@ type PaginatedResponse = { data: Purchase[]; meta: { current_page: number; last_
 const emptyLine = (): { product_id: number; quantity: number; price: number } => ({ product_id: 0, quantity: 1, price: 0 })
 
 export default function PurchasesPage() {
+  const navigate = useNavigate()
   const { showToast } = useToast()
   const [purchases, setPurchases] = useState<Purchase[]>([])
   const [meta, setMeta] = useState({ current_page: 1, last_page: 1, total: 0 })
@@ -124,6 +126,18 @@ export default function PurchasesPage() {
     }
   }
 
+  const handleDelete = async (p: Purchase, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!window.confirm(`Delete purchase "${p.purchase_number}"? Stock will be adjusted to reverse intake.`)) return
+    try {
+      await api.delete(`/purchases/${p.id}`)
+      showToast('Purchase deleted.')
+      fetchPurchases({ page: meta.current_page, search })
+    } catch {
+      showToast('Failed to delete purchase.')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageTitle
@@ -165,21 +179,41 @@ export default function PurchasesPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Supplier</th>
                   <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">Total</th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Status</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">Delete</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {loading ? (
-                  <tr><td colSpan={5} className="px-6 py-12 text-center text-sm text-slate-500">Loading...</td></tr>
+                  <tr><td colSpan={6} className="px-6 py-12 text-center text-sm text-slate-500">Loading...</td></tr>
                 ) : purchases.length === 0 ? (
-                  <tr><td colSpan={5} className="px-6 py-12 text-center text-sm text-slate-500">No purchases found</td></tr>
+                  <tr><td colSpan={6} className="px-6 py-12 text-center text-sm text-slate-500">No purchases found</td></tr>
                 ) : (
                   purchases.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50/50">
+                    <tr
+                      key={p.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => navigate(`/purchases/${p.id}`)}
+                      onKeyDown={(ev) => {
+                        if (ev.key === 'Enter') navigate(`/purchases/${p.id}`)
+                      }}
+                      className="cursor-pointer hover:bg-slate-50/50"
+                    >
                       <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-900">{p.purchase_number}</td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">{p.purchase_date}</td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">{p.supplier?.name ?? '—'}</td>
                       <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-slate-600">₹{Number(p.total_amount).toLocaleString()}</td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">{p.status}</td>
+                      <td className="whitespace-nowrap px-6 py-4 text-right">
+                        <button
+                          type="button"
+                          onClick={(e) => handleDelete(p, e)}
+                          className="rounded p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                          aria-label="Delete purchase"
+                        >
+                          <HiOutlineTrash className="h-5 w-5" />
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}

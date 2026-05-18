@@ -26,6 +26,7 @@ type FormValues = InvoiceTemplateSettingsPayload & {
   show_bank_details: boolean
   show_qr_code: boolean
   footer_text: string
+  notes_text: string
   payment_terms: string
 }
 
@@ -41,6 +42,7 @@ const defaultFormValues: FormValues = {
   show_bank_details: true,
   show_qr_code: false,
   footer_text: '',
+  notes_text: 'Thank you for your business.',
   payment_terms: 'Payment is due within 30 days.',
 }
 
@@ -74,6 +76,7 @@ export default function InvoiceTemplatePage() {
             show_bank_details: data.show_bank_details,
             show_qr_code: data.show_qr_code,
             footer_text: data.footer_text ?? '',
+            notes_text: data.notes_text ?? '',
             payment_terms: data.payment_terms ?? '',
           })
         }
@@ -105,6 +108,7 @@ export default function InvoiceTemplatePage() {
         show_bank_details: values.show_bank_details,
         show_qr_code: values.show_qr_code,
         footer_text: values.footer_text || null,
+        notes_text: values.notes_text || null,
         payment_terms: values.payment_terms || null,
       }
       await invoiceTemplateSettingsService.update(payload)
@@ -128,6 +132,7 @@ export default function InvoiceTemplatePage() {
     show_bank_details: watched.show_bank_details ?? true,
     show_qr_code: watched.show_qr_code ?? false,
     footer_text: watched.footer_text || null,
+    notes_text: watched.notes_text || null,
     payment_terms: watched.payment_terms || null,
   }
 
@@ -194,6 +199,21 @@ export default function InvoiceTemplatePage() {
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
               placeholder="Optional footer text for the invoice"
             />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent>
+              <h2 className="mb-3 text-lg font-semibold text-slate-900">Notes</h2>
+              <p className="mb-3 text-xs text-slate-500">
+                Shown when &quot;Show Notes&quot; is on. Leave empty to hide the notes block on PDFs (same idea as footer).
+              </p>
+              <textarea
+                {...register('notes_text')}
+                rows={3}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                placeholder="e.g. Thank you for your business."
+              />
             </CardContent>
           </Card>
 

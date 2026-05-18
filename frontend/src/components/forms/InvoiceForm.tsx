@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi2'
 import Button from '../Button'
@@ -35,6 +35,15 @@ function lineTotal(q: number, price: number, taxRate: number) {
   return subtotal + tax
 }
 
+export type InvoiceFormSnapshot = {
+  customer_id: string
+  invoice_date: string
+  due_date: string
+  items: InvoiceLineItem[]
+  /** Document-level discount in major currency units */
+  discount_amount?: string
+}
+
 type InvoiceFormProps = {
   customers: Customer[]
   products: Product[]
@@ -43,10 +52,15 @@ type InvoiceFormProps = {
     invoice_date: string
     due_date: string
     items: { product_id: number; quantity: number; price: number; tax_rate: number }[]
+    discount_amount?: number
   }) => void | Promise<void>
   onCancel: () => void
   saving?: boolean
   submitLabel?: string
+  /** When set (e.g. edit mode), form fields and line items are populated from this snapshot. */
+  initialSnapshot?: InvoiceFormSnapshot | null
+  /** Quotation-specific labels (dates, item heading, preview title). */
+  quotationMode?: boolean
 }
 
 export default function InvoiceForm({
@@ -56,13 +70,17 @@ export default function InvoiceForm({
   onCancel,
   saving = false,
   submitLabel = 'Save Invoice',
+  initialSnapshot = null,
+  quotationMode = false,
 }: InvoiceFormProps) {
   const [items, setItems] = useState<InvoiceLineItem[]>([{ ...emptyLine }])
+  const [discountInput, setDiscountInput] = useState('0')
   const [showPreview, setShowPreview] = useState(false)
 
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<InvoiceFormValues>({
     defaultValues: {
@@ -71,6 +89,25 @@ export default function InvoiceForm({
       due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
     },
   })
+
+  useEffect(() => {
+    if (!initialSnapshot) return
+    reset({
+      customer_id: initialSnapshot.customer_id,
+      invoice_date: initialSnapshot.invoice_date,
+      due_date: initialSnapshot.due_date,
+    })
+    setItems(
+      initialSnapshot.items.length > 0
+        ? initialSnapshot.items.map((row) => ({ ...row }))
+        : [{ ...emptyLine }]
+    )
+    setDiscountInput(
+      initialSnapshot.discount_amount != null && initialSnapshot.discount_amount !== ''
+        ? initialSnapshot.discount_amount
+        : '0'
+    )
+  }, [initialSnapshot, reset])
 
   const customerOptions = [
     { value: '', label: 'Select customer' },
@@ -102,7 +139,10 @@ export default function InvoiceForm({
     const r = parseFloat(row.tax_rate) || 0
     return sum + (q * p * r) / 100
   }, 0)
-  const grandTotal = subtotal + taxAmount
+  const preDiscountTotal = subtotal + taxAmount
+  const discountRaw = Math.max(0, parseFloat(discountInput) || 0)
+  const discountApplied = Math.min(discountRaw, preDiscountTotal)
+  const grandTotal = preDiscountTotal - discountApplied
 
   const onFormSubmit = (values: InvoiceFormValues) => {
     const validItems = items.filter((row) => row.product_id && parseFloat(row.quantity) > 0 && parseFloat(row.unit_price) >= 0)
@@ -117,6 +157,7 @@ export default function InvoiceForm({
         price: parseFloat(row.unit_price) || 0,
         tax_rate: parseFloat(row.tax_rate) || 0,
       })),
+      discount_amount: discountApplied,
     })
   }
 
@@ -130,22 +171,26 @@ export default function InvoiceForm({
           error={errors.customer_id?.message}
         />
         <InputField
-          label="Invoice Date"
+          label={quotationMode ? 'Quotation date' : 'Invoice date'}
           type="date"
-          {...register('invoice_date', { required: 'Invoice date is required' })}
+          {...register('invoice_date', {
+            required: quotationMode ? 'Quotation date is required' : 'Invoice date is required',
+          })}
           error={errors.invoice_date?.message}
         />
         <InputField
-          label="Due Date"
+          label={quotationMode ? 'Valid until' : 'Due date'}
           type="date"
-          {...register('due_date', { required: 'Due date is required' })}
+          {...register('due_date', {
+            required: quotationMode ? 'Valid until date is required' : 'Due date is required',
+          })}
           error={errors.due_date?.message}
         />
       </div>
 
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-800">Invoice Items</h3>
+          <h3 className="text-sm font-semibold text-slate-800">{quotationMode ? 'Quotation items' : 'Invoice items'}</h3>
           <Button type="button" variant="secondary" onClick={addLine} className="gap-1">
             <HiOutlinePlus className="h-4 w-4" />
             Add Item
@@ -239,15 +284,53 @@ export default function InvoiceForm({
                 )
               })}
             </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-slate-200 bg-slate-50/90">
+                <td colSpan={4} className="px-4 py-2.5 text-right text-slate-600">
+                  Subtotal
+                </td>
+                <td className="px-4 py-2.5 text-right font-medium tabular-nums text-slate-800">
+                  ₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </td>
+                <td className="px-2 py-2.5" />
+              </tr>
+              <tr className="bg-slate-50/90">
+                <td colSpan={4} className="px-4 py-2.5 text-right text-slate-600">
+                  Tax
+                </td>
+                <td className="px-4 py-2.5 text-right font-medium tabular-nums text-slate-800">
+                  ₹{taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </td>
+                <td className="px-2 py-2.5" />
+              </tr>
+              <tr className="bg-slate-50/90">
+                <td colSpan={4} className="px-4 py-2.5 text-right text-slate-600">
+                  Discount
+                </td>
+                <td className="px-4 py-2.5 text-right align-middle">
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={discountInput}
+                    onChange={(e) => setDiscountInput(e.target.value)}
+                    className="w-full min-w-[6.5rem] rounded border border-slate-300 px-2 py-1.5 text-right tabular-nums text-slate-800"
+                    aria-label="Discount amount"
+                  />
+                </td>
+                <td className="px-2 py-2.5" />
+              </tr>
+              <tr className="border-t border-slate-200 bg-slate-50/90">
+                <td colSpan={4} className="px-4 py-3 text-right text-sm font-semibold text-slate-800">
+                  Total
+                </td>
+                <td className="px-4 py-3 text-right text-base font-semibold tabular-nums text-slate-900">
+                  ₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </td>
+                <td className="px-2 py-3" />
+              </tr>
+            </tfoot>
           </table>
-        </div>
-      </div>
-
-      <div className="border-t border-slate-200 pt-4">
-        <div className="flex justify-end gap-8 text-sm">
-          <span className="text-slate-600">Subtotal: <strong className="text-slate-900">₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></span>
-          <span className="text-slate-600">Tax: <strong className="text-slate-900">₹{taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></span>
-          <span className="text-slate-600">Grand Total: <strong className="text-lg text-slate-900">₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></span>
         </div>
       </div>
 
@@ -261,7 +344,7 @@ export default function InvoiceForm({
           onClick={() => setShowPreview(true)}
           disabled={saving}
         >
-          Preview Invoice
+          {quotationMode ? 'Preview quotation' : 'Preview invoice'}
         </Button>
         <Button type="submit" loading={saving} loadingLabel="Saving...">
           {submitLabel}
@@ -271,7 +354,7 @@ export default function InvoiceForm({
       <Modal
         isOpen={showPreview}
         onClose={() => setShowPreview(false)}
-        title="Invoice Preview"
+        title={quotationMode ? 'Quotation preview' : 'Invoice preview'}
         size="md"
       >
         <div className="space-y-4">
@@ -317,8 +400,14 @@ export default function InvoiceForm({
               <span>Tax</span>
               <span>₹{taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
             </p>
+            {discountApplied > 0 && (
+              <p className="flex justify-between text-slate-600">
+                <span>Discount</span>
+                <span>−₹{discountApplied.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              </p>
+            )}
             <p className="flex justify-between text-lg font-semibold text-slate-900">
-              <span>Grand Total</span>
+              <span>Total</span>
               <span>₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
             </p>
           </div>

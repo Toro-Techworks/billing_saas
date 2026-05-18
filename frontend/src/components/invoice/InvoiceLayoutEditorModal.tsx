@@ -144,8 +144,8 @@ export default function InvoiceLayoutEditorModal({ isOpen, onClose, onSaved }: P
                   gridConfig={{
                     cols: 12,
                     rowHeight: 56,
-                    margin: [8, 8],
-                    containerPadding: [0, 0],
+                    margin: [10, 14],
+                    containerPadding: [4, 8],
                     maxRows: Infinity,
                   }}
                   dragConfig={{ enabled: true, handle: '.invoice-block-drag-handle' }}

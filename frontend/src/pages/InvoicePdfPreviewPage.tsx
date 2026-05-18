@@ -17,7 +17,7 @@ export default function InvoicePdfPreviewPage() {
 
   const isQuotationRoute = location.pathname.startsWith('/quotations/')
   const backPath = isQuotationRoute ? '/quotations' : '/invoices'
-  const listLabel = isQuotationRoute ? 'Quotations' : 'Billing'
+  const listLabel = isQuotationRoute ? 'Quotations' : 'Invoices'
   const state = location.state as LocationState | null
   const documentNumber = state?.documentNumber
 

@@ -12,6 +12,7 @@ export type InvoiceTemplateSettingsPayload = {
   show_bank_details?: boolean
   show_qr_code?: boolean
   footer_text?: string | null
+  notes_text?: string | null
   payment_terms?: string | null
 }
 
@@ -48,6 +49,7 @@ const defaultSettings: InvoiceTemplateSettings = {
   show_bank_details: true,
   show_qr_code: false,
   footer_text: null,
+  notes_text: 'Thank you for your business.',
   payment_terms: 'Payment is due within 30 days.',
   created_at: '',
   updated_at: '',

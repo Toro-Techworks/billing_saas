@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash } from 'react-icons/hi2'
+import { HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi2'
 import api from '../services/api'
 import PageTitle from '../components/layout/PageTitle'
 import Button from '../components/Button'
@@ -43,6 +44,7 @@ function apiErrorMessage(err: unknown, fallback: string): string {
 }
 
 export default function ExpensesPage() {
+  const navigate = useNavigate()
   const { showToast } = useToast()
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [customers, setCustomers] = useState<CustomerOption[]>([])
@@ -54,7 +56,6 @@ export default function ExpensesPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [form, setForm] = useState({
     expense_type: 'generic' as ExpenseType,
     customer_id: '',
@@ -105,7 +106,6 @@ export default function ExpensesPage() {
   }, [page])
 
   const openAdd = () => {
-    setEditingExpense(null)
     setForm({
       expense_type: 'generic',
       customer_id: '',
@@ -113,19 +113,6 @@ export default function ExpensesPage() {
       amount: '',
       description: '',
       expense_date: new Date().toISOString().slice(0, 10),
-    })
-    setModalOpen(true)
-  }
-
-  const openEdit = (e: Expense) => {
-    setEditingExpense(e)
-    setForm({
-      expense_type: e.expense_type === 'client' ? 'client' : 'generic',
-      customer_id: e.customer_id != null ? String(e.customer_id) : '',
-      category: e.category,
-      amount: String(e.amount),
-      description: e.description ?? '',
-      expense_date: e.expense_date,
     })
     setModalOpen(true)
   }
@@ -155,13 +142,8 @@ export default function ExpensesPage() {
         description: form.description.trim() || null,
         expense_date: form.expense_date,
       }
-      if (editingExpense) {
-        await api.put(`/expenses/${editingExpense.id}`, payload)
-        showToast('Expense updated.')
-      } else {
-        await api.post('/expenses', payload)
-        showToast('Expense added.')
-      }
+      await api.post('/expenses', payload)
+      showToast('Expense added.')
       setModalOpen(false)
       fetchExpenses({ page: meta.current_page, from, to, expense_type: filterType })
     } catch (err) {
@@ -171,7 +153,8 @@ export default function ExpensesPage() {
     }
   }
 
-  const handleDelete = async (e: Expense) => {
+  const handleDelete = async (e: Expense, ev?: React.MouseEvent) => {
+    ev?.stopPropagation()
     if (!window.confirm(`Delete expense "${e.category}"?`)) return
     try {
       await api.delete(`/expenses/${e.id}`)
@@ -253,7 +236,7 @@ export default function ExpensesPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Category</th>
                   <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">Amount</th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500">Description</th>
-                  <th className="relative px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">Actions</th>
+                  <th className="relative px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-500">Delete</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
@@ -267,7 +250,16 @@ export default function ExpensesPage() {
                   </tr>
                 ) : (
                   expenses.map((e) => (
-                    <tr key={e.id} className="hover:bg-slate-50/50">
+                    <tr
+                      key={e.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => navigate(`/expenses/${e.id}/edit`)}
+                      onKeyDown={(ev) => {
+                        if (ev.key === 'Enter') navigate(`/expenses/${e.id}/edit`)
+                      }}
+                      className="cursor-pointer hover:bg-slate-50/50"
+                    >
                       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">{e.expense_date}</td>
                       <td className="whitespace-nowrap px-6 py-4 text-sm">
                         <span
@@ -286,23 +278,15 @@ export default function ExpensesPage() {
                       <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-900">{e.category}</td>
                       <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-slate-600">₹{Number(e.amount).toLocaleString()}</td>
                       <td className="max-w-xs truncate px-6 py-4 text-sm text-slate-600">{e.description ?? '—'}</td>
-                      <td className="whitespace-nowrap px-6 py-4 text-right">
-                        <div className="flex justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => openEdit(e)}
-                            className="rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                          >
-                            <HiOutlinePencil className="h-5 w-5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(e)}
-                            className="rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600"
-                          >
-                            <HiOutlineTrash className="h-5 w-5" />
-                          </button>
-                        </div>
+                      <td className="whitespace-nowrap px-6 py-4 text-right" onClick={(ev) => ev.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={(ev) => handleDelete(e, ev)}
+                          className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                          aria-label="Delete expense"
+                        >
+                          <HiOutlineTrash className="h-5 w-5" />
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -322,7 +306,7 @@ export default function ExpensesPage() {
       <Modal
         isOpen={modalOpen}
         onClose={() => !saving && setModalOpen(false)}
-        title={editingExpense ? 'Edit Expense' : 'Add Expense'}
+        title="Add Expense"
         size="md"
       >
         <form onSubmit={onSubmit} className="space-y-4">
@@ -405,7 +389,7 @@ export default function ExpensesPage() {
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="secondary" onClick={() => setModalOpen(false)} disabled={saving}>Cancel</Button>
-            <Button type="submit" disabled={saving}>{saving ? 'Saving...' : editingExpense ? 'Update' : 'Save'}</Button>
+            <Button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save'}</Button>
           </div>
         </form>
       </Modal>

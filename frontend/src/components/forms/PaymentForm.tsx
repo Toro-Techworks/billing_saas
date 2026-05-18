@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import Button from '../Button'
 import InputField from '../InputField'
@@ -27,6 +28,10 @@ type PaymentFormProps = {
   onCancel: () => void
   saving?: boolean
   submitLabel?: string
+  /** Merge into defaults when editing an existing payment */
+  defaultValuesOverride?: Partial<PaymentFormValues>
+  /** Prevent changing the linked invoice on update */
+  lockInvoiceSelect?: boolean
 }
 
 export default function PaymentForm({
@@ -35,12 +40,23 @@ export default function PaymentForm({
   onCancel,
   saving = false,
   submitLabel = 'Record Payment',
+  defaultValuesOverride,
+  lockInvoiceSelect = false,
 }: PaymentFormProps) {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
-  } = useForm<PaymentFormValues>({ defaultValues: defaultPaymentFormValues })
+  } = useForm<PaymentFormValues>({
+    defaultValues: { ...defaultPaymentFormValues, ...defaultValuesOverride },
+  })
+
+  useEffect(() => {
+    if (defaultValuesOverride && Object.keys(defaultValuesOverride).length > 0) {
+      reset({ ...defaultPaymentFormValues, ...defaultValuesOverride })
+    }
+  }, [defaultValuesOverride, reset])
 
   const invoiceOptions = [
     { value: '', label: 'Select invoice' },
@@ -55,6 +71,7 @@ export default function PaymentForm({
       <Select
         label="Invoice"
         options={invoiceOptions}
+        disabled={lockInvoiceSelect}
         {...register('invoice_id', { required: 'Please select an invoice' })}
         error={errors.invoice_id?.message}
       />

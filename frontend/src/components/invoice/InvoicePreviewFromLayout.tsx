@@ -6,9 +6,15 @@ import type { InvoiceLayoutItem } from '../../services/invoiceLayoutService'
 
 const sampleCompany = {
   name: 'Acme Inc.',
+  address: '123 Business St',
+  city: 'Chennai',
+  state: 'TN',
+  pincode: '600001',
+  country: 'India',
   email: 'billing@acme.example',
   phone: '+1 234 567 8900',
-  address: '123 Business St, City, ST 12345',
+  gst_number: '29AAAAA0000A1Z5',
+  website: 'https://acme.example',
 }
 
 const sampleCustomer = {
@@ -48,7 +54,17 @@ function InvoiceBlockByType({ componentId }: { componentId: string }) {
           <br />
           {sampleCompany.address}
           <br />
-          {sampleCompany.email} | {sampleCompany.phone}
+          {sampleCompany.city}, {sampleCompany.state} - {sampleCompany.pincode}
+          <br />
+          {sampleCompany.country}
+          <br />
+          {sampleCompany.email}
+          <br />
+          {sampleCompany.phone}
+          <br />
+          GST: {sampleCompany.gst_number}
+          <br />
+          {sampleCompany.website}
         </div>
       )
     case 'invoice_header':
@@ -77,43 +93,45 @@ function InvoiceBlockByType({ componentId }: { componentId: string }) {
     case 'item_table':
     case 'items_table':
       return (
-        <div className="min-h-0 overflow-auto">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50">
-                <th className="py-1 text-left font-medium">Description</th>
-                <th className="py-1 text-right">Qty</th>
-                <th className="py-1 text-right">Price</th>
-                <th className="py-1 text-right">Tax</th>
-                <th className="py-1 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sampleItems.map((item, i) => (
-                <tr key={i} className="border-b border-slate-100">
-                  <td className="py-1">{item.description}</td>
-                  <td className="py-1 text-right">{item.description === 'Consulting' ? 2 : 1}</td>
-                  <td className="py-1 text-right">{item.price}.00</td>
-                  <td className="py-1 text-right">{item.tax}.00</td>
-                  <td className="py-1 text-right">{item.total.toFixed(2)}</td>
+        <div className="flex h-full min-h-0 flex-col justify-end">
+          <div className="w-full min-h-0 overflow-auto pt-0">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="px-1 py-1.5 text-left font-medium">Description</th>
+                  <th className="px-1 py-1.5 text-right">Qty</th>
+                  <th className="px-1 py-1.5 text-right">Price</th>
+                  <th className="px-1 py-1.5 text-right">Tax</th>
+                  <th className="px-1 py-1.5 text-right">Total</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sampleItems.map((item, i) => (
+                  <tr key={i} className="border-b border-slate-100 last:border-b-0">
+                    <td className="px-1 py-1.5">{item.description}</td>
+                    <td className="px-1 py-1.5 text-right">{item.description === 'Consulting' ? 2 : 1}</td>
+                    <td className="px-1 py-1.5 text-right">{item.price}.00</td>
+                    <td className="px-1 py-1.5 text-right">{item.tax}.00</td>
+                    <td className="px-1 py-1.5 text-right">{item.total.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )
     case 'tax_summary':
       return (
-        <div className="text-right text-sm">
-          <div>Tax: {taxTotal.toFixed(2)}</div>
+        <div className="text-right text-sm leading-tight">
+          <div className="leading-snug">Tax: {taxTotal.toFixed(2)}</div>
         </div>
       )
     case 'subtotal_total':
     case 'totals':
       return (
-        <div className="text-right text-sm">
-          <div>Subtotal: {subtotal.toFixed(2)}</div>
-          <div className="font-semibold">Total: {total.toFixed(2)}</div>
+        <div className="space-y-0 text-right text-sm leading-tight">
+          <div className="leading-snug">Subtotal: {subtotal.toFixed(2)}</div>
+          <div className="font-semibold leading-snug">Total: {total.toFixed(2)}</div>
         </div>
       )
     case 'payment_terms':
@@ -126,10 +144,12 @@ function InvoiceBlockByType({ componentId }: { componentId: string }) {
       )
     case 'notes':
       return (
-        <div className="text-sm text-slate-600">
+        <div className="text-[11px] leading-relaxed text-slate-600">
           <strong>Notes</strong>
           <br />
           Thank you for your business.
+          <br />
+          This text is set under Settings → Invoice Template → Notes (like footer).
         </div>
       )
     case 'bank_details':
@@ -200,20 +220,33 @@ export default function InvoicePreviewFromLayout({ layoutItems }: Props) {
             layout={gridLayout}
             gridConfig={{
               cols: 12,
-              rowHeight: 48,
-              margin: [6, 6],
-              containerPadding: [0, 0],
+              rowHeight: 36,
+              margin: [8, 0],
+              containerPadding: [2, 2],
               maxRows: Infinity,
             }}
             dragConfig={{ enabled: false }}
             resizeConfig={{ enabled: false }}
             compactor={noCompactor}
           >
-            {visibleItems.map((item) => (
-              <div key={item.i} className="min-h-0 overflow-hidden rounded border border-slate-100 bg-white p-2">
-                <InvoiceBlockByType componentId={item.i} />
-              </div>
-            ))}
+            {visibleItems.map((item) => {
+              const compactVertical = ['tax_summary', 'subtotal_total', 'totals'].includes(item.i)
+              const isItems = item.i === 'item_table' || item.i === 'items_table'
+              return (
+                <div
+                  key={item.i}
+                  className={`min-h-0 overflow-hidden rounded border border-slate-100 bg-white px-2 ${
+                    isItems
+                      ? 'flex h-full flex-col pb-0 pt-1'
+                      : compactVertical
+                        ? '-mt-0.5 border-t-0 py-0'
+                        : 'py-3'
+                  }`}
+                >
+                  <InvoiceBlockByType componentId={item.i} />
+                </div>
+              )
+            })}
           </GridLayout>
         )}
       </div>

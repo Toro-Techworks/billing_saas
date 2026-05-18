@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { HiOutlinePlus } from 'react-icons/hi2'
+import { HiOutlinePencilSquare, HiOutlinePlus, HiOutlineTrash } from 'react-icons/hi2'
 import axios from 'axios'
 import api from '../services/api'
 import PageTitle from '../components/layout/PageTitle'
@@ -43,11 +43,34 @@ function fetchProducts() {
     .then((res) => normalizeProductList(res.data))
 }
 
+function productToFormValues(p: Product): ProductFormValues {
+  return {
+    name: p.name,
+    sku: p.sku ?? '',
+    price: String(p.price),
+    tax_rate: p.tax_rate != null ? String(p.tax_rate) : '',
+    description: p.description ?? '',
+  }
+}
+
+function apiErrorMessage(err: unknown, fallback: string): string {
+  if (axios.isAxiosError(err)) {
+    const d = err.response?.data as { message?: string; errors?: Record<string, string[]> }
+    if (d?.message && typeof d.message === 'string') return d.message
+    if (d?.errors && typeof d.errors === 'object') {
+      const first = Object.values(d.errors).flat()[0]
+      if (first) return String(first)
+    }
+  }
+  return fallback
+}
+
 export default function ProductsPage() {
   const { showToast } = useToast()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
+  const [editing, setEditing] = useState<Product | null>(null)
   const [saving, setSaving] = useState(false)
 
   const loadProducts = () => {
@@ -65,32 +88,59 @@ export default function ProductsPage() {
     loadProducts()
   }, [])
 
+  const openAdd = () => {
+    setEditing(null)
+    setModalOpen(true)
+  }
+
+  const openEdit = (p: Product) => {
+    setEditing(p)
+    setModalOpen(true)
+  }
+
+  const closeModal = () => {
+    if (!saving) {
+      setModalOpen(false)
+      setEditing(null)
+    }
+  }
+
   const onSubmit = async (values: ProductFormValues) => {
     setSaving(true)
+    const payload = {
+      name: values.name,
+      sku: values.sku,
+      price: parseFloat(values.price),
+      tax_rate: values.tax_rate ? parseFloat(values.tax_rate) : 0,
+      description: values.description || null,
+    }
     try {
-      await api.post('/products', {
-        name: values.name,
-        sku: values.sku,
-        price: parseFloat(values.price),
-        tax_rate: values.tax_rate ? parseFloat(values.tax_rate) : 0,
-        description: values.description || null,
-      })
-      showToast('Product created successfully.')
+      if (editing) {
+        await api.put(`/products/${editing.id}`, payload)
+        showToast('Product updated.')
+      } else {
+        await api.post('/products', payload)
+        showToast('Product created successfully.')
+      }
       setModalOpen(false)
+      setEditing(null)
       loadProducts()
     } catch (err: unknown) {
-      let msg = 'Failed to save product.'
-      if (axios.isAxiosError(err) && err.response?.data) {
-        const d = err.response.data as { message?: string; errors?: Record<string, string[]> }
-        if (typeof d.message === 'string') msg = d.message
-        else if (d.errors) {
-          const first = Object.values(d.errors).flat()[0]
-          if (first) msg = first
-        }
-      }
-      showToast(msg)
+      showToast(apiErrorMessage(err, editing ? 'Failed to update product.' : 'Failed to save product.'))
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleDelete = async (p: Product, ev?: React.MouseEvent) => {
+    ev?.stopPropagation()
+    if (!window.confirm(`Delete product "${p.name}"? This cannot be undone.`)) return
+    try {
+      await api.delete(`/products/${p.id}`)
+      showToast('Product deleted.')
+      loadProducts()
+    } catch (err) {
+      showToast(apiErrorMessage(err, 'Failed to delete product.'))
     }
   }
 
@@ -100,7 +150,7 @@ export default function ProductsPage() {
         title="Products"
         description="Manage products and services"
         action={
-          <Button onClick={() => setModalOpen(true)} className="gap-2">
+          <Button onClick={openAdd} className="gap-2">
             <HiOutlinePlus className="h-4 w-4" />
             Add Product
           </Button>
@@ -120,15 +170,45 @@ export default function ProductsPage() {
                     <th className="py-3 font-medium">SKU</th>
                     <th className="py-3 font-medium">Price</th>
                     <th className="py-3 font-medium">Tax Rate</th>
+                    <th className="py-3 w-20 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {products.map((product) => (
-                    <tr key={product.id} className="border-b border-slate-100">
+                    <tr
+                      key={product.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => openEdit(product)}
+                      onKeyDown={(ev) => {
+                        if (ev.key === 'Enter') openEdit(product)
+                      }}
+                      className="cursor-pointer border-b border-slate-100 hover:bg-slate-50/50"
+                    >
                       <td className="py-3 text-slate-800">{product.name}</td>
                       <td className="py-3 text-slate-600">{product.sku ?? '—'}</td>
                       <td className="py-3 text-slate-800">₹{Number(product.price).toLocaleString()}</td>
                       <td className="py-3 text-slate-600">{product.tax_rate}%</td>
+                      <td className="py-3 text-right" onClick={(ev) => ev.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(product)}
+                            className="rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-indigo-600"
+                            aria-label={`Edit ${product.name}`}
+                          >
+                            <HiOutlinePencilSquare className="h-5 w-5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(ev) => handleDelete(product, ev)}
+                            className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                            aria-label={`Delete ${product.name}`}
+                          >
+                            <HiOutlineTrash className="h-5 w-5" />
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -143,16 +223,17 @@ export default function ProductsPage() {
 
       <Modal
         isOpen={modalOpen}
-        onClose={() => !saving && setModalOpen(false)}
-        title="Add Product"
+        onClose={closeModal}
+        title={editing ? 'Edit Product' : 'Add Product'}
         size="lg"
       >
         <ProductForm
-          defaultValues={defaultProductFormValues}
+          key={editing ? `edit-${editing.id}` : 'add'}
+          defaultValues={editing ? productToFormValues(editing) : defaultProductFormValues}
           onSubmit={onSubmit}
-          onCancel={() => setModalOpen(false)}
+          onCancel={closeModal}
           saving={saving}
-          submitLabel="Save Product"
+          submitLabel={editing ? 'Update Product' : 'Save Product'}
         />
       </Modal>
     </>

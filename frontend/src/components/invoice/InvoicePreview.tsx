@@ -10,14 +10,21 @@ export type InvoiceTemplateSettings = {
   show_bank_details: boolean
   show_qr_code: boolean
   footer_text: string | null
+  notes_text: string | null
   payment_terms: string | null
 }
 
 const sampleCompany = {
   name: 'Acme Inc.',
+  address: '123 Business St',
+  city: 'Chennai',
+  state: 'TN',
+  pincode: '600001',
+  country: 'India',
   email: 'billing@acme.example',
   phone: '+1 234 567 8900',
-  address: '123 Business St, City, ST 12345',
+  gst_number: '29AAAAA0000A1Z5',
+  website: 'https://acme.example',
 }
 
 const sampleCustomer = {
@@ -61,7 +68,17 @@ export default function InvoicePreview({ settings }: InvoicePreviewProps) {
                 <br />
                 {sampleCompany.address}
                 <br />
-                {sampleCompany.email} | {sampleCompany.phone}
+                {sampleCompany.city}, {sampleCompany.state} - {sampleCompany.pincode}
+                <br />
+                {sampleCompany.country}
+                <br />
+                {sampleCompany.email}
+                <br />
+                {sampleCompany.phone}
+                <br />
+                GST: {sampleCompany.gst_number}
+                <br />
+                {sampleCompany.website}
               </div>
             )}
           </div>
@@ -123,10 +140,10 @@ export default function InvoicePreview({ settings }: InvoicePreviewProps) {
           </tbody>
         </table>
 
-        <div className="mt-3 text-right">
-          <div>Subtotal: {subtotal.toFixed(2)}</div>
-          <div>Tax: {taxTotal.toFixed(2)}</div>
-          <div className="font-semibold">Total: {total.toFixed(2)}</div>
+        <div className="mt-1 space-y-0 text-right text-sm leading-tight">
+          <div className="leading-snug">Subtotal: {subtotal.toFixed(2)}</div>
+          <div className="leading-snug">Tax: {taxTotal.toFixed(2)}</div>
+          <div className="font-semibold leading-snug">Total: {total.toFixed(2)}</div>
         </div>
 
         {settings.show_payment_terms && settings.payment_terms && (
@@ -137,11 +154,16 @@ export default function InvoicePreview({ settings }: InvoicePreviewProps) {
           </div>
         )}
 
-        {settings.show_notes && (
-          <div className="mt-3 text-slate-600">
+        {settings.show_notes && (settings.notes_text?.trim() ?? '') !== '' && (
+          <div className="mt-3 text-[11px] text-slate-600">
             <strong>Notes</strong>
             <br />
-            Thank you for your business.
+            {(settings.notes_text ?? '').split(/\r?\n/).map((line, i) => (
+              <span key={i}>
+                {i > 0 ? <br /> : null}
+                {line}
+              </span>
+            ))}
           </div>
         )}
 
